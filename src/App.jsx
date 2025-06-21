@@ -110,7 +110,7 @@ function App() {
     if (!selected) return;
 
     try {
-      await axios.post('http://localhost:3001/mark-attendance', {
+      await axios.post('https://backend-production-c05c.up.railway.app/mark-attendance', {
         studentId: selected.StudentId,
         name: selected['Student Name']
       });
@@ -136,9 +136,9 @@ function App() {
     logPrint('Thermal');
   };
   const syncWithMongo = () => {
-    axios.post('http://localhost:3001/save-log', { logs: printLogs })
+    axios.post('https://backend-production-c05c.up.railway.app/save-log', { logs: printLogs })
       .then(() => {
-        alert('Synced with MongoDB');
+        alert('data synced successfully');
         setPrintLogs([]);
         fetchMongoLogs();
       })
@@ -146,17 +146,17 @@ function App() {
   };
 
   const fetchMongoLogs = () => {
-    axios.get('http://localhost:3001/logs')
+    axios.get('https://backend-production-c05c.up.railway.app/logs')
       .then(res => setMongoLogs(res.data));
   };
 
   const fetchAttendanceStats = () => {
-    axios.get('http://localhost:3001/attendance-stats')
+    axios.get('https://backend-production-c05c.up.railway.app/attendance-stats')
       .then(res => setAttendanceStats(res.data));
   };
 
   const fetchAttendanceLogs = () => {
-    axios.get('http://localhost:3001/attendance-logs')
+    axios.get('https://backend-production-c05c.up.railway.app/attendance-logs')
       .then(res => setAttendanceLogs(res.data));
   };
 

@@ -70,11 +70,11 @@ function App() {
   }, [query]);
 
   // PDF Builder
-  const createPDF = () => {
+  const createPDF = (tokenNo) => {
     const doc = new jsPDF({ unit: 'mm', format: [80, 100] });
     const center = (text, y) => {
       const w = doc.getTextWidth(text);
-      doc.text(text, (80 - w) / 2, y);
+      doc.text(String(text), (80 - w) / 2, y);
     };
     let y = 10;
     doc.setFont('courier', 'bold'); doc.setFontSize(10);
@@ -83,7 +83,8 @@ function App() {
     doc.setFont('courier', 'normal'); doc.line(5, y, 75, y); y += 4;
     center(`Student ID: ${selected.StudentId}`, y); y += 5;
     center(`Name: ${selected['Student Name']}`, y); y += 5;
-    center(`Serial No: S-${selected.SNo}`, y); y += 6;
+    center(`Serial No: S-${selected.SNo}`, y); y += 5;
+    center(`Token No: #${tokenNo}`, y); y += 6;
     doc.line(5, y, 75, y); y += 4;
     doc.setFont('courier', 'italic');
     center('Please keep this token safe.', y); y += 4;
@@ -95,12 +96,15 @@ function App() {
     return doc;
   };
 
-  const logPrint = (type) => {
+
+
+  const logPrint = (type, tokenNo) => {
     const newLog = {
       Timestamp: new Date().toLocaleString(),
       StudentID: selected.StudentId,
       Name: selected['Student Name'],
       Serial: `S-${selected.SNo}`,
+      Token: `#${tokenNo}`,
       Method: type,
     };
     setPrintLogs(prev => [...prev, newLog]);
@@ -124,17 +128,20 @@ function App() {
 
   const handleDownload = () => {
     if (!selected) return;
-    createPDF().save(`voucher_${selected.StudentId}.pdf`);
-    logPrint('Download');
+    const tokenNo = mongoLogs.length + 1;
+    createPDF(tokenNo).save(`voucher_${selected.StudentId}.pdf`);
+    logPrint('Download', tokenNo);
   };
 
   const handlePrint = () => {
     if (!selected) return;
-    const blobUrl = createPDF().output('bloburl');
+    const tokenNo = mongoLogs.length + 1;
+    const blobUrl = createPDF(tokenNo).output('bloburl');
     const win = window.open(blobUrl, '_blank');
     win?.print();
-    logPrint('Thermal');
+    logPrint('Thermal', tokenNo);
   };
+
   const syncWithMongo = () => {
     axios.post('https://backend-production-c05c.up.railway.app/save-log', { logs: printLogs })
       .then(() => {
@@ -165,6 +172,21 @@ function App() {
     fetchAttendanceStats();
     fetchAttendanceLogs();
   }, []);
+  const exportTableToExcel = () => {
+    const exportData = mongoLogs.map((log, index) => ({
+      TokenNo: `#${index + 1}`,
+      StudentID: log.StudentID,
+      Name: log.Name,
+      Serial: log.Serial,
+      Method: log.Method,
+      Time: log.Timestamp,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance Logs');
+    XLSX.writeFile(workbook, 'attendance_logs.xlsx');
+  };
 
   return (
     <div className="min-h-screen bg-blue-50 p-6 font-sans">
@@ -284,12 +306,21 @@ function App() {
         {/* Logs Section */}
         <div className="grid grid-cols-1 gap-6">
           <div className="bg-white p-4 rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-3">Attendance Log</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-3 gap-2">
+              <h2 className="text-xl font-semibold">Attendance Log</h2>
+              <button
+                onClick={exportTableToExcel}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm"
+              >
+                Download Excel
+              </button>
+            </div>
+
             <div className="max-h-64 overflow-y-auto">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-2 py-2 text-left">S.No</th>
+                    <th className="px-2 py-2 text-left">T.No</th>
                     <th className="px-2 py-2 text-left">Student ID</th>
                     <th className="px-2 py-2 text-left">Name</th>
                     <th className="px-2 py-2 text-left">Method</th>
